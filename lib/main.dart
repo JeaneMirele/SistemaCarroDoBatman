@@ -39,9 +39,15 @@ class BatCarApp extends StatelessWidget {
             primary: Color(0xFFFFD700),
             secondary: Color(0xFF2C2C2C),
           ),
-          textTheme: GoogleFonts.rajdhaniTextTheme(ThemeData.dark().textTheme),
-        ),
 
+          textTheme: GoogleFonts.robotoTextTheme(ThemeData.dark().textTheme).copyWith(
+
+          headlineMedium: GoogleFonts.roboto(fontWeight: FontWeight.bold, letterSpacing: 1.0),
+          titleLarge: GoogleFonts.roboto(fontWeight: FontWeight.bold, letterSpacing: 0.5),
+          bodyMedium: GoogleFonts.roboto(fontSize: 14, height: 1.5),
+        ),
+          iconTheme: const IconThemeData(color: Colors.white70),
+        ),
 
         home: const BatScreen(),
       ),

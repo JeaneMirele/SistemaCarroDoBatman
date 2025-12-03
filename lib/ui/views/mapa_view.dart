@@ -11,7 +11,7 @@ class AutomaticControlView extends StatelessWidget {
       builder: (context, vm, child) {
         return Column(
           children: [
-            // Status Header
+
             Container(
               padding: const EdgeInsets.all(16),
               color: Colors.black54,
@@ -36,7 +36,7 @@ class AutomaticControlView extends StatelessWidget {
                     IconButton(
                       icon: const Icon(Icons.stop_circle_outlined, color: Colors.red, size: 30),
                       onPressed: () {
-                        // Zera o joystick para forçar volta ao manual/parar
+
                         vm.updateJoystick(0, 0);
                       },
                       tooltip: "Abortar Automático",
@@ -45,7 +45,7 @@ class AutomaticControlView extends StatelessWidget {
               ),
             ),
 
-            // Mapa Expandido
+
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -71,7 +71,7 @@ class AutomaticControlView extends StatelessWidget {
                       ),
                       child: Stack(
                         children: [
-                          // Grid
+
                           Positioned.fill(
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(20),
@@ -84,7 +84,7 @@ class AutomaticControlView extends StatelessWidget {
                             ),
                           ),
 
-                          // Alvo
+
                           if (vm.state.modoDirecao == 'automatico' || (vm.state.destinoX != 0))
                             Positioned(
                               left: (vm.state.destinoX / 100) * constraints.maxWidth - 20,
@@ -101,7 +101,7 @@ class AutomaticControlView extends StatelessWidget {
                               ),
                             ),
 
-                          // Instrução Central se parado
+
                           if (vm.state.modoDirecao != 'automatico')
                             const Center(
                               child: Text(

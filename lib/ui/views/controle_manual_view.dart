@@ -14,7 +14,7 @@ class ManualControlView extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Painel de Funções Especiais (Luz, Turbo, Stealth)
+
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
           child: Row(
@@ -44,7 +44,7 @@ class ManualControlView extends StatelessWidget {
 
         const Spacer(),
 
-        // Área do Joystick
+
         Container(
           padding: const EdgeInsets.all(30),
           decoration: BoxDecoration(
@@ -95,7 +95,7 @@ class ManualControlView extends StatelessWidget {
 
         const Spacer(),
 
-        // Controle de Voz
+
         GestureDetector(
           onLongPress: vm.listenVoiceCommand,
           onTap: vm.listenVoiceCommand,

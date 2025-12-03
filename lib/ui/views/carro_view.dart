@@ -25,7 +25,7 @@ class _BatScreenState extends State<BatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("BAT-REMOTE LINK"),
+        title: const Text("BATMÓVEL"),
         centerTitle: true,
         backgroundColor: Colors.black,
         elevation: 0,
@@ -35,7 +35,7 @@ class _BatScreenState extends State<BatScreen> {
         ),
       ),
 
-      // Aqui alternamos as telas baseado no índice selecionado
+
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
@@ -49,7 +49,7 @@ class _BatScreenState extends State<BatScreen> {
           });
         },
         backgroundColor: Colors.black,
-        selectedItemColor: const Color(0xFFFFD700), // Amarelo Batman
+        selectedItemColor: const Color(0xFFFFD700),
         unselectedItemColor: Colors.grey,
         showUnselectedLabels: true,
         type: BottomNavigationBarType.fixed,
@@ -67,7 +67,7 @@ class _BatScreenState extends State<BatScreen> {
     );
   }
 
-  // Barra de status que fica sempre visível no topo
+
   Widget _buildTelemetryBar(CarroViewModel vm) {
     return Container(
       color: const Color(0xFF121212),
