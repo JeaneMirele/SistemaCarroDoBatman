@@ -9,6 +9,9 @@ class CarroModel {
   bool stealth;
   bool turbo;
 
+  bool ignicao;
+  double angulo;
+
   CarroModel({
     this.destinoX = 0,
     this.destinoY = 0,
@@ -19,8 +22,11 @@ class CarroModel {
     this.modoDirecao = "manual",
     this.stealth = false,
     this.turbo = false,
+    this.ignicao = false,
+    this.angulo = 0,
   });
 
+  // Método usado pelo Service para ler dados do Firebase
   factory CarroModel.fromMap(Map<dynamic, dynamic> map) {
     return CarroModel(
       destinoX: (map['destinoX'] ?? 0).toDouble(),
@@ -32,8 +38,11 @@ class CarroModel {
       modoDirecao: map['modoDirecao'] ?? "manual",
       stealth: map['stealth'] ?? false,
       turbo: map['turbo'] ?? false,
+      ignicao: map['ignicao'] ?? false,
+      angulo: (map['angulo'] ?? 0).toDouble(),
     );
   }
+
 
   Map<String, dynamic> toMap() {
     return {
@@ -46,6 +55,8 @@ class CarroModel {
       'modoDirecao': modoDirecao,
       'stealth': stealth,
       'turbo': turbo,
+      'ignicao': ignicao,
+      'angulo': angulo,
     };
   }
 }

@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:flutter_joystick/flutter_joystick.dart';
 import '../view_models/carro_view_model.dart';
 
-
 class ManualControlView extends StatelessWidget {
   const ManualControlView({super.key});
 
@@ -11,20 +10,27 @@ class ManualControlView extends StatelessWidget {
   Widget build(BuildContext context) {
     final vm = Provider.of<CarroViewModel>(context);
 
+    // Lógica do botão trazida para cá
+    final bool motorLigado = vm.state.ignicao;
+    final Color corBotao = motorLigado ? Colors.redAccent : const Color(0xFFFFD700);
+    final Color corIcone = motorLigado ? Colors.white : Colors.black;
+    final String textoBotao = motorLigado ? "DESLIGAR MOTOR" : "DAR PARTIDA";
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
 
+        // --- Botões de Toggle (Luz, Turbo, Stealth) ---
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _BatButton(
-                  label: "FARÓIS",
+                  label: "CABINE",
                   isActive: vm.state.luz,
                   icon: Icons.lightbulb,
-                  activeColor: Colors.yellow,
+                  activeColor: Colors.white,
                   onTap: vm.toggleLuz),
               _BatButton(
                   label: "TURBO",
@@ -44,7 +50,7 @@ class ManualControlView extends StatelessWidget {
 
         const Spacer(),
 
-
+        // --- Joystick ---
         Container(
           padding: const EdgeInsets.all(30),
           decoration: BoxDecoration(
@@ -95,39 +101,34 @@ class ManualControlView extends StatelessWidget {
 
         const Spacer(),
 
-
-        GestureDetector(
-          onLongPress: vm.listenVoiceCommand,
-          onTap: vm.listenVoiceCommand,
-          child: Column(
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color:
-                    vm.isListening ? Colors.red : const Color(0xFF2C2C2C),
-                    boxShadow: [
-                      if (vm.isListening)
-                        BoxShadow(
-                            color: Colors.red.withOpacity(0.6),
-                            blurRadius: 20,
-                            spreadRadius: 5)
-                    ]),
-                child: Icon(vm.isListening ? Icons.mic : Icons.mic_none,
-                    color: Colors.white, size: 32),
+        // --- BOTÃO DE PARTIDA (ADICIONADO AQUI) ---
+        Container(
+          height: 60,
+          width: 180,
+          margin: const EdgeInsets.only(bottom: 30), // Espaço do fundo
+          child: ElevatedButton.icon(
+            onPressed: () {
+              vm.toggleIgnicao();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: corBotao,
+              elevation: 10,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
               ),
-              const SizedBox(height: 8),
-              Text(
-                  vm.isListening
-                      ? "OUVINDO..."
-                      : "SEGURE PARA FALAR",
-                  style: const TextStyle(fontSize: 10, color: Colors.white38))
-            ],
+            ),
+            icon: Icon(Icons.power_settings_new, color: corIcone, size: 28),
+            label: Text(
+                textoBotao,
+                style: TextStyle(
+                    color: corIcone,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.0,
+                    fontSize: 16
+                )
+            ),
           ),
         ),
-        const SizedBox(height: 30),
       ],
     );
   }
@@ -163,7 +164,8 @@ class _BatButton extends StatelessWidget {
                   width: 2),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: isActive ? activeColor : Colors.grey, size: 28),
+            child: Icon(icon,
+                color: isActive ? activeColor : Colors.grey, size: 28),
           ),
           const SizedBox(height: 8),
           Text(label,

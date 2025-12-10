@@ -25,21 +25,31 @@ class _BatScreenState extends State<BatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("BATMÓVEL"),
+        title: const Text("BATMÓVEL", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.5)),
         centerTitle: true,
         backgroundColor: Colors.black,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: Icon(
+                vm.isListening ? Icons.mic : Icons.mic_none,
+                color: vm.isListening ? Colors.red : Colors.white
+            ),
+            onPressed: () => vm.listenVoiceCommand(),
+          )
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(40),
           child: _buildTelemetryBar(vm),
         ),
       ),
 
-
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
       ),
+
+      // REMOVIDO: O FloatingActionButton não está mais aqui.
 
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
@@ -67,7 +77,6 @@ class _BatScreenState extends State<BatScreen> {
     );
   }
 
-
   Widget _buildTelemetryBar(CarroViewModel vm) {
     return Container(
       color: const Color(0xFF121212),
@@ -75,7 +84,8 @@ class _BatScreenState extends State<BatScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _telemetryItem("DIST", "${vm.state.distancia.toInt()}cm", Icons.radar),
+          _telemetryItem("DIST", "${vm.state.distancia.toStringAsFixed(1)}cm", Icons.radar,
+              color: vm.state.distancia < 15 ? Colors.red : Colors.greenAccent),
           Container(width: 1, height: 20, color: Colors.white10),
           _telemetryItem("MODO", vm.state.modoDirecao.toUpperCase(), Icons.settings_remote,
               color: vm.state.modoDirecao == 'automatico' ? Colors.cyan : Colors.amber),
