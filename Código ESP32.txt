@@ -1,0 +1,375 @@
+#include <Arduino.h>
+#include <WiFi.h>
+#include <ESP32Servo.h>
+
+
+// --- NOVA BIBLIOTECA FIREBASE (Mobizt) ---
+#include <Firebase_ESP_Client.h>
+#include "addons/TokenHelper.h"
+#include "addons/RTDBHelper.h"
+
+
+// --- CONFIGURAÇÕES DE REDE E FIREBASE ---
+#define WIFI_SSID "PREENCHA_CORRETAMENTE"
+#define WIFI_PASSWORD "PREENCHA_CORRETAMENTE"
+
+
+// URL e API Key
+#define DATABASE_URL "PREENCHA_CORRETAMENTE"
+#define API_KEY "PREENCHA_CORRETAMENTE"
+
+
+// Objetos do Firebase
+FirebaseData fbdo;
+FirebaseData fbdoEnvio;
+FirebaseAuth auth;
+FirebaseConfig config;
+
+
+// --- DEFINIÇÃO DE PINOS ---
+
+
+// LEDs
+#define LED_CABINE 2   // LED indicador da cabine (Pino interno do ESP32)
+#define LED_TURBO 4    // LED indicador do Turbo
+#define FAROL1 18
+#define FAROL2 19
+#define RE1 21
+#define RE2 22
+
+
+// Motor A (Esquerdo) - Driver L293D
+#define ENA 14
+#define IN1 26
+#define IN2 27
+
+
+// Motor B (Direito) - Driver L293D
+#define IN3 25
+#define IN4 33
+#define ENB 32
+
+
+// Sensores e Atuadores
+#define PIN_TRIG 5
+#define PIN_ECHO_ULTRASONICO 34 // IMPORTANTE: Usar divisor de tensão (5V -> 3.3V)
+#define PIN_BUZZER 23          
+#define PIN_SERVO 13            
+
+
+Servo servoCabine;
+
+
+// --- ESTADO DO CARRO ---
+struct CarroState {
+    double destinoX = 0;
+    double destinoY = 0;
+    double joystickX = 0;
+    double joystickY = 0;
+    double angulo = 0;      
+    bool ignicao = false;
+    bool cabineAberta = false;
+    bool stealth = false;
+    bool turbo = false;
+    String modoDirecao = "manual";
+} estado;
+
+
+// --- VARIÁVEIS GLOBAIS ---
+unsigned long sendDataPrevMillis = 0;
+double posX = 0.0, posY = 0.0;
+const int DISTANCIA_MINIMA = 20;
+bool signupOK = false;
+
+
+// --- FUNÇÕES ---
+
+
+// Função para tocar som
+void tocarSom(int freq, int duracao) {
+    tone(PIN_BUZZER, freq, duracao);
+    delay(duracao);
+    noTone(PIN_BUZZER);
+}
+
+
+void emitirSons() {
+    static bool ignAnterior = false;
+    static bool turboAnterior = false;
+
+
+    // Som de ligar o carro
+    if (estado.ignicao && !ignAnterior) {
+        tocarSom(500, 150);
+        delay(50);
+        tocarSom(800, 300);
+    }
+    ignAnterior = estado.ignicao;
+
+
+    // Som do Turbo
+    if (estado.turbo && !turboAnterior) {
+        tocarSom(1200, 100);
+        tocarSom(1500, 200);
+    }
+    turboAnterior = estado.turbo;
+
+
+    // Som de ré
+    if (estado.ignicao && estado.joystickY < -0.5 && estado.modoDirecao == "manual") {
+        static unsigned long delayRe = 0;
+        if (millis() - delayRe > 500) {
+           tocarSom(600, 100);
+           delayRe = millis();
+        }
+    }
+}
+
+
+void controlarCabine() {
+    // 90 graus = Aberta, 0 graus = Fechada
+    servoCabine.write(estado.cabineAberta ? 90 : 0);
+    digitalWrite(LED_CABINE, estado.cabineAberta ? HIGH : LOW);
+}
+
+
+float lerDistancia() {
+    digitalWrite(PIN_TRIG, LOW);
+    delayMicroseconds(2);
+    digitalWrite(PIN_TRIG, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(PIN_TRIG, LOW);
+
+
+    long dur = pulseIn(PIN_ECHO_ULTRASONICO, HIGH);
+    if (dur == 0) return 999;
+    return dur * 0.034 / 2;
+}
+
+
+void moverMotores(int velEsq, int velDir) {
+    // Motor Esquerdo
+    if (velEsq > 0) {
+        digitalWrite(IN1, LOW); digitalWrite(IN2, HIGH);
+    } else if (velEsq < 0) {
+        digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW);
+    } else {
+        digitalWrite(IN1, LOW); digitalWrite(IN2, LOW);
+    }
+    analogWrite(ENA, abs(velEsq));
+
+
+    // Motor Direito
+    if (velDir > 0) {
+        digitalWrite(IN3, LOW); digitalWrite(IN4, HIGH);
+    } else if (velDir < 0) {
+        digitalWrite(IN3, HIGH); digitalWrite(IN4, LOW);
+    } else {
+        digitalWrite(IN3, LOW); digitalWrite(IN4, LOW);
+    }
+    analogWrite(ENB, abs(velDir));
+}
+
+
+// --- SETUP ---
+void setup() {
+    Serial.begin(115200);
+
+
+    // Configuração dos Pinos
+    pinMode(ENA, OUTPUT); pinMode(IN1, OUTPUT); pinMode(IN2, OUTPUT);
+    pinMode(ENB, OUTPUT); pinMode(IN3, OUTPUT); pinMode(IN4, OUTPUT);
+    pinMode(PIN_TRIG, OUTPUT); pinMode(PIN_ECHO_ULTRASONICO, INPUT);
+    pinMode(PIN_BUZZER, OUTPUT);
+
+
+    pinMode(LED_CABINE, OUTPUT);
+    pinMode(LED_TURBO, OUTPUT);
+    pinMode(FAROL1, OUTPUT);
+    pinMode(FAROL2, OUTPUT);
+    pinMode(RE1, OUTPUT);
+    pinMode(RE2, OUTPUT);
+
+
+    // Inicializa Servo
+    servoCabine.setPeriodHertz(50);
+    servoCabine.attach(PIN_SERVO, 500, 2400);
+    servoCabine.write(0); // Começa fechado
+
+
+    // Conectar WiFi
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    Serial.print("Conectando ao WiFi");
+    while (WiFi.status() != WL_CONNECTED) {
+        Serial.print(".");
+        delay(300);
+    }
+    Serial.println();
+    Serial.print("Conectado! IP: ");
+    Serial.println(WiFi.localIP());
+
+
+    // Configuração Firebase
+    config.api_key = API_KEY;
+    config.database_url = DATABASE_URL;
+
+
+    if (Firebase.signUp(&config, &auth, "", "")) {
+        Serial.println("Login no Firebase OK");
+        signupOK = true;
+    } else {
+        Serial.printf("%s\n", config.signer.signupError.message.c_str());
+    }
+   
+    config.token_status_callback = tokenStatusCallback;
+
+
+    Firebase.begin(&config, &auth);
+    Firebase.reconnectWiFi(true);
+}
+
+
+// --- LOOP ---
+void loop() {
+    if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 100)) {
+        sendDataPrevMillis = millis();
+
+
+        // --- 1. LER JSON COMPLETO DO FIREBASE ---
+        if (Firebase.RTDB.getJSON(&fbdo, "/carro")) {
+            FirebaseJson &json = fbdo.jsonObject();
+            FirebaseJsonData data;
+
+
+            json.get(data, "joystickX"); if (data.success) estado.joystickX = data.to<double>();
+            json.get(data, "joystickY"); if (data.success) estado.joystickY = data.to<double>();
+            json.get(data, "destinoX"); if (data.success) estado.destinoX = data.to<double>();
+            json.get(data, "destinoY"); if (data.success) estado.destinoY = data.to<double>();
+            json.get(data, "ignicao"); if (data.success) estado.ignicao = data.to<bool>();
+           
+            json.get(data, "luz"); if (data.success) estado.cabineAberta = data.to<bool>();
+           
+            json.get(data, "stealth"); if (data.success) estado.stealth = data.to<bool>();
+            json.get(data, "turbo"); if (data.success) estado.turbo = data.to<bool>();
+            json.get(data, "modoDirecao"); if (data.success) estado.modoDirecao = data.to<String>();
+            json.get(data, "angulo"); if (data.success) estado.angulo = data.to<double>();
+
+
+        } else {
+             // Serial.println(fbdo.errorReason());
+        }
+
+
+        // --- 2. ATUADORES ---
+        controlarCabine();
+        emitirSons();
+
+
+        // Iluminação
+        if (!estado.ignicao || estado.stealth) {
+            digitalWrite(FAROL1, LOW); digitalWrite(FAROL2, LOW);
+            digitalWrite(RE1, LOW); digitalWrite(RE2, LOW);
+            digitalWrite(LED_TURBO, LOW);
+        } else {
+            digitalWrite(FAROL1, HIGH); digitalWrite(FAROL2, HIGH);
+            digitalWrite(RE1, HIGH); digitalWrite(RE2, HIGH);
+            digitalWrite(LED_TURBO, estado.turbo ? HIGH : LOW);
+        }
+
+
+        // --- 3. MOVIMENTO ---
+        float dist = lerDistancia();
+
+
+        // Firebase.RTDB.setFloatAsync(&fbdo, "/carro/distancia", dist);
+        // Firebase.RTDB.setFloatAsync(&fbdo, "/carro/obstaculoDistance", dist);
+
+
+        // Leitura do sensor
+
+
+      // Leitura do sensor
+
+
+      // Debug no Serial (opcional, só para você ver no PC)
+      Serial.print("Dist: ");
+      Serial.println(dist);
+
+
+      // Envio Assíncrono (Não trava o carro)
+      // Como já testamos a conexão antes, confiamos que vai chegar.
+      Firebase.RTDB.setFloatAsync(&fbdoEnvio, "/carro/distancia", dist);
+
+
+      int pwmEsq = 0, pwmDir = 0;
+      int velocidadeBase = 200;
+      if (estado.turbo) velocidadeBase = 255;
+
+
+      // Só anda se: Ignição LIGADA E Cabine FECHADA
+      if (estado.ignicao && !estado.cabineAberta) {
+         
+          if (estado.modoDirecao == "manual") {
+              float x = estado.joystickX;
+              float y = estado.joystickY;
+
+
+              // Sistema Anti-Colisão
+              // if (dist < DISTANCIA_MINIMA && y > 0) {
+              if (dist < DISTANCIA_MINIMA) {
+                  moverMotores(0, 0);
+                  if (!estado.stealth) tocarSom(200, 100);
+
+
+                  if(!estado.turbo){
+                    moverMotores(-255, -255);
+                    delay(500);
+                    moverMotores(255, -255);
+                    delay(650);
+                  }else{
+                    moverMotores(-255, -255);
+                    delay(500);
+                    moverMotores(255, -255);
+                    delay(500);
+                  }
+
+
+                  moverMotores(0, 0);
+              } else {
+                  // Direção Diferencial
+                  pwmEsq = constrain((y + x) * velocidadeBase, -255, 255);
+                  pwmDir = constrain((y - x) * velocidadeBase, -255, 255);
+
+
+                  // Zona Morta
+                  if (abs(pwmEsq) < 45) pwmEsq = 0;
+                  if (abs(pwmDir) < 45) pwmDir = 0;
+              }
+
+
+          } else {
+              // Modo Automático
+              double dx = estado.destinoX - posX;
+              double dy = estado.destinoY - posY;
+              double distAlvo = sqrt(dx * dx + dy * dy);
+
+
+              if (distAlvo > 5) {
+                  double ang = atan2(dy, dx);
+                  posX += cos(ang) * 2.0;
+                  posY += sin(ang) * 2.0;
+                  pwmEsq = velocidadeBase;
+                  pwmDir = velocidadeBase;
+              } else {
+                  pwmEsq = pwmDir = 0;
+              }
+          }
+      }
+
+
+      moverMotores(pwmEsq, pwmDir);
+    }
+}
+
+
+
