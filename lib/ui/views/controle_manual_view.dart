@@ -23,27 +23,49 @@ class ManualControlView extends StatelessWidget {
         // --- Botões de Toggle (Luz, Turbo, Stealth) ---
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          child: Column(
             children: [
-              _BatButton(
-                  label: "CABINE",
-                  isActive: vm.state.luz,
-                  icon: Icons.lightbulb,
-                  activeColor: Colors.white,
-                  onTap: vm.toggleLuz),
-              _BatButton(
-                  label: "TURBO",
-                  isActive: vm.state.turbo,
-                  icon: Icons.local_fire_department,
-                  activeColor: Colors.redAccent,
-                  onTap: vm.toggleTurbo),
-              _BatButton(
-                  label: "STEALTH",
-                  isActive: vm.state.stealth,
-                  icon: Icons.visibility_off,
-                  activeColor: Colors.cyanAccent,
-                  onTap: vm.toggleStealth),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _BatButton(
+                      label: "CABINE",
+                      isActive: vm.state.luz,
+                      icon: Icons.lightbulb,
+                      activeColor: Colors.white,
+                      onTap: vm.toggleLuz),
+                  _BatButton(
+                      label: "FARÓIS",
+                      isActive: vm.state.farol,
+                      icon: Icons.highlight,
+                      activeColor: Colors.yellowAccent,
+                      onTap: vm.toggleFarol),
+                  _BatButton(
+                      label: "TURBO",
+                      isActive: vm.state.turbo,
+                      icon: Icons.local_fire_department,
+                      activeColor: Colors.redAccent,
+                      onTap: vm.toggleTurbo),
+                ],
+              ),
+              const SizedBox(height: 10),
+              // Stealth agora em uma nova linha ou ajustado conforme necessário, 
+              // mas para manter consistência com o pedido, podemos apenas adicionar o farol e reorganizar.
+              // Vamos colocar o Stealth centralizado abaixo ou junto se couber.
+              // Como são 4 botões agora, uma grade 2x2 ou linha única com scroll pode ser melhor,
+              // mas vou tentar manter 4 na linha ou 2 e 2. Vamos tentar 4 na linha se couber, senão 2 linhas.
+              // Vou optar por colocar o Stealth centralizado abaixo para destaque.
+              Center(
+                 child: SizedBox(
+                   width: 100,
+                   child: _BatButton(
+                      label: "STEALTH",
+                      isActive: vm.state.stealth,
+                      icon: Icons.visibility_off,
+                      activeColor: Colors.cyanAccent,
+                      onTap: vm.toggleStealth),
+                 ),
+              )
             ],
           ),
         ),
@@ -101,11 +123,11 @@ class ManualControlView extends StatelessWidget {
 
         const Spacer(),
 
-        // --- BOTÃO DE PARTIDA (ADICIONADO AQUI) ---
+        // --- BOTÃO DE PARTIDA ---
         Container(
           height: 60,
           width: 180,
-          margin: const EdgeInsets.only(bottom: 30), // Espaço do fundo
+          margin: const EdgeInsets.only(bottom: 30),
           child: ElevatedButton.icon(
             onPressed: () {
               vm.toggleIgnicao();

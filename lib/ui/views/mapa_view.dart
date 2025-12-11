@@ -32,18 +32,49 @@ class AutomaticControlView extends StatelessWidget {
                       ),
                     ],
                   ),
-                  if (vm.state.modoDirecao == 'automatico')
-                    IconButton(
-                      icon: const Icon(Icons.stop_circle_outlined, color: Colors.red, size: 30),
-                      onPressed: () {
-
-                        vm.updateJoystick(0, 0);
-                      },
-                      tooltip: "Abortar Automático",
-                    )
+                  Row(
+                    children: [
+                      // Botão para enviar localização atual (GPS)
+                      IconButton(
+                        icon: const Icon(Icons.my_location, color: Colors.greenAccent),
+                        onPressed: () {
+                          vm.usarLocalizacaoAtual();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text("ENVIANDO COORDENADAS GPS..."),
+                              backgroundColor: Colors.green.withOpacity(0.9),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        },
+                        tooltip: "Enviar Minha Localização",
+                      ),
+                      if (vm.state.modoDirecao == 'automatico')
+                        IconButton(
+                          icon: const Icon(Icons.stop_circle_outlined, color: Colors.red, size: 30),
+                          onPressed: () {
+                            vm.updateJoystick(0, 0);
+                          },
+                          tooltip: "Abortar Automático",
+                        )
+                    ],
+                  ),
                 ],
               ),
             ),
+            
+            // Exibição das coordenadas se existirem
+            if (vm.state.latRef != null && vm.state.lngRef != null)
+              Container(
+                width: double.infinity,
+                color: Colors.black87,
+                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+                child: Text(
+                  "ALVO: ${vm.state.latRef!.toStringAsFixed(5)}, ${vm.state.lngRef!.toStringAsFixed(5)}",
+                  style: const TextStyle(color: Colors.cyan, fontSize: 12, fontFamily: 'Courier'),
+                  textAlign: TextAlign.center,
+                ),
+              ),
 
 
             Expanded(
@@ -95,7 +126,7 @@ class AutomaticControlView extends StatelessWidget {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                                     color: Colors.black,
-                                    child: const Text("DESTINO", style: TextStyle(fontSize: 8, color: Colors.cyan)),
+                                    child: const Text("DESTINO (GRID)", style: TextStyle(fontSize: 8, color: Colors.cyan)),
                                   )
                                 ],
                               ),
@@ -105,7 +136,7 @@ class AutomaticControlView extends StatelessWidget {
                           if (vm.state.modoDirecao != 'automatico')
                             const Center(
                               child: Text(
-                                "TOQUE NO GRID PARA\nENGAJAR PILOTO AUTOMÁTICO",
+                                "TOQUE NO GRID OU USE GPS\nPARA ENGAJAR PILOTO AUTOMÁTICO",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(color: Colors.white24, letterSpacing: 2),
                               ),
@@ -134,7 +165,7 @@ class AutomaticControlView extends StatelessWidget {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text("CALCULANDO ROTA PARA: ${mapX.toInt()}, ${mapY.toInt()}"),
+        content: Text("CALCULANDO ROTA PARA GRID: ${mapX.toInt()}, ${mapY.toInt()}"),
         backgroundColor: Colors.cyan.withOpacity(0.9),
         behavior: SnackBarBehavior.floating,
       ),

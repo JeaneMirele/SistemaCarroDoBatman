@@ -28,12 +28,14 @@ class CarroService {
         'joystickX': carro.joystickX,
         'joystickY': carro.joystickY,
         'luz': carro.luz,
+        'farol': carro.farol,
         'turbo': carro.turbo,
         'stealth': carro.stealth,
         'modoDirecao': carro.modoDirecao,
         'destinoX': carro.destinoX,
         'destinoY': carro.destinoY,
-
+        'latRef': carro.latRef,
+        'lngRef': carro.lngRef,
       };
 
       await _dbRef.child('carro').update(comandos);
